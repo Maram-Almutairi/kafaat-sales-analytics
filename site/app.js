@@ -232,7 +232,51 @@
       r.ym = isoDate(r.t).slice(0, 7);
       r.weekday = WEEKDAYS[new Date(r.t).getUTCDay()];
     }
-    return { rows, fixes, log };
+    return { rows, fixes, log, changes: cellChanges(raw, rows) };
+  }
+
+  // Every cell of a kept row whose cleaned value differs from the raw text, so the
+  // report can show exactly what changed (including invisible whitespace).
+  const MAX_CHANGES = 20000;
+  function cellChanges(raw, rows) {
+    const list = [], counts = {};
+    let total = 0;
+    const add = (r, col, before, after, kinds) => {
+      total++;
+      for (const k of kinds) counts[k] = (counts[k] || 0) + 1;
+      if (list.length < MAX_CHANGES) list.push({ row: r._i + 1, col, before, after, kinds });
+    };
+    for (const r of [...rows].sort((a, b) => a._i - b._i)) {
+      const src = raw[r._i];
+      const d0 = String(src.Date ?? ""), d1 = isoDate(r.t);
+      if (d0 !== d1) {
+        const kinds = [];
+        if (d0 !== d0.trim()) kinds.push("Whitespace removed");
+        if (d0.trim() !== d1) kinds.push(Number.isNaN(toNum(d0)) ? "Date reformatted" : "Excel serial → date");
+        add(r, "Date", d0, d1, kinds);
+      }
+      for (const f of ["Cost", "Sale"]) {
+        const v0 = String(src[f] ?? ""), v1 = String(r[f]);
+        if (v0 === v1) continue;
+        const kinds = [];
+        if (/\s/.test(v0)) kinds.push("Whitespace removed");
+        if (v0.includes(",")) kinds.push("Commas removed");
+        if (!kinds.length) kinds.push("Number normalised");
+        add(r, f, v0, v1, kinds);
+      }
+      for (const d of DIMS) {
+        const v0 = String(src[d] ?? ""), t = v0.trim(), v1 = r[d];
+        if (v0 === v1) continue;
+        const kinds = [];
+        if (!t) kinds.push("Blank filled");
+        else {
+          if (v0 !== t) kinds.push("Whitespace removed");
+          if (t !== v1) kinds.push("Name fixed");
+        }
+        add(r, d, v0, v1, kinds);
+      }
+    }
+    return { list, counts, total };
   }
 
   // ---------------------------------------------------------------- state
@@ -453,7 +497,8 @@
   function renderReport() {
     const { log, fixes, rawCount, rows } = state.data;
     const removed = rawCount - rows.length;
-    $("report-title").textContent = `🧹 Cleaning report: ${fmt(rawCount)} rows in, ${fmt(rows.length)} kept, ${fmt(removed)} removed`;
+    const ch = state.data.changes;
+    $("report-title").textContent = `🧹 Cleaning report: ${fmt(rawCount)} rows in, ${fmt(rows.length)} kept, ${fmt(removed)} removed, ${fmt(ch.total)} cells changed`;
     let html = `<table class="data"><thead><tr><th>Step</th><th class="n">Rows removed</th><th>Reason</th></tr></thead><tbody>` +
       log.map((s) => `<tr><td>${s.name}</td><td class="n">${fmt(s.n)}</td><td>${esc(s.reason)}</td></tr>`).join("") + "</tbody></table>";
     if (fixes.length) html += `<p style="margin-top:12px">Name fixes (rows kept): ${fixes.map(esc).join(" · ")}</p>`;
@@ -463,7 +508,61 @@
         <table class="data"><thead><tr>${FIELDS.map((f) => `<th>${esc(DIMS.includes(f) ? state.labels[f] : f)}</th>`).join("")}</tr></thead><tbody>` +
         s.rows.slice(0, 50).map((r) => `<tr>${FIELDS.map((f) => `<td>${esc(r[f]) || "<i>(blank)</i>"}</td>`).join("")}</tr>`).join("") + "</tbody></table>";
     }
+    html += `<h4 class="ch-title">Cell changes in kept rows (${fmt(ch.total)})</h4>`;
+    if (!ch.total) html += `<p class="hint">No cell values were changed.</p>`;
+    else {
+      const cols = [...new Set(ch.list.map((c) => c.col))];
+      html += `<p class="hint">Every value the cleaning changed, exactly as it was in the file.
+          Invisible characters are marked: <span class="ws">·</span> space · <span class="ws">→</span> tab ·
+          <span class="ws">°</span> non-breaking space · <span class="ws">↵</span> line break · <span class="ws">∅</span> empty.</p>
+        <div class="ch-chips">${Object.entries(ch.counts).map(([k, n]) => `<span>${esc(k)} <b>${fmt(n)}</b></span>`).join("")}</div>
+        <div class="ch-bar">
+          <label class="field">Change<select id="ch-kind"><option value="">All changes</option>${Object.keys(ch.counts).map((k) => `<option>${esc(k)}</option>`).join("")}</select></label>
+          <label class="field">Column<select id="ch-col"><option value="">All columns</option>${cols.map((c) => `<option value="${c}">${esc(colLabel(c))}</option>`).join("")}</select></label>
+          <button type="button" class="btn" id="ch-download">Download change log (CSV)</button>
+        </div>
+        <div id="ch-table"></div>`;
+    }
     $("report-body").innerHTML = html;
+    if (!ch.total) return;
+    const draw = () => {
+      const kind = $("ch-kind").value, col = $("ch-col").value;
+      const list = ch.list.filter((c) => (!kind || c.kinds.includes(kind)) && (!col || c.col === col));
+      const LIMIT = 300;
+      $("ch-table").innerHTML = `<p class="hint">${fmt(list.length)} change${list.length === 1 ? "" : "s"}${list.length > LIMIT ? `, showing the first ${LIMIT} (download the log for all)` : ""}${ch.list.length < ch.total ? ` · log capped at ${fmt(ch.list.length)} of ${fmt(ch.total)}` : ""}</p>
+        <table class="data"><thead><tr><th class="n">Row</th><th>Column</th><th>Before</th><th>After</th><th>Change</th></tr></thead><tbody>` +
+        list.slice(0, LIMIT).map((c) => `<tr><td class="n">${fmt(c.row)}</td><td>${esc(colLabel(c.col))}</td><td class="ch-before">${showWs(c.before)}</td><td class="ch-after">${showWs(c.after)}</td><td>${c.kinds.map(esc).join(", ")}</td></tr>`).join("") +
+        "</tbody></table>";
+    };
+    $("ch-kind").addEventListener("change", draw);
+    $("ch-col").addEventListener("change", draw);
+    $("ch-download").addEventListener("click", downloadChanges);
+    draw();
+  }
+
+  const colLabel = (c) => (DIMS.includes(c) ? state.labels[c] : c);
+  // Escape, then make invisible characters visible.
+  function showWs(v) {
+    if (v === "") return '<span class="ws">∅</span>';
+    return esc(v).replace(/ /g, '<span class="ws">·</span>').replace(/\t/g, '<span class="ws">→</span>')
+      .replace(/ /g, '<span class="ws">°</span>').replace(/\r?\n|\r/g, '<span class="ws">↵</span>');
+  }
+
+  function downloadChanges() {
+    const cell = (v) => { const s = String(v); return /[",\n\r]/.test(s) || /^[=+\-@]/.test(s) ? `"${s.replace(/^([=+\-@])/, "'$1").replace(/"/g, '""')}"` : s; };
+    const vis = (v) => String(v).replace(/ /g, "·").replace(/\t/g, "→").replace(/ /g, "°").replace(/\r?\n|\r/g, "↵");
+    const lines = [["Row", "Column", "Before", "Before (whitespace shown)", "After", "Change"].join(",")].concat(state.data.changes.list.map((c) =>
+      [c.row, colLabel(c.col), c.before, vis(c.before), c.after, c.kinds.join("; ")].map(cell).join(",")));
+    saveCSV(lines, "_changes.csv", "kafaat_changes.csv");
+  }
+
+  function saveCSV(lines, suffix, sampleName) {
+    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = state.source === "sample" ? sampleName : state.upload.name.replace(/\.[^.]+$/, "") + suffix;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
   function render() {
@@ -724,12 +823,7 @@
     const head = ["Date", ...state.dims.map((d) => state.labels[d]), "Cost", "Sale", "Profit", "Margin_%"];
     const lines = [head.map(cell).join(",")].concat(rows.map((r) =>
       [isoDate(r.t), ...state.dims.map((d) => r[d]), r.Cost, r.Sale, +r.Profit.toFixed(4), r.Margin].map(cell).join(",")));
-    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = state.source === "sample" ? "kafaat_cleaned.csv" : state.upload.name.replace(/\.[^.]+$/, "") + "_cleaned.csv";
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    saveCSV(lines, "_cleaned.csv", "kafaat_cleaned.csv");
   }
 
   // ---------------------------------------------------------------- wiring
