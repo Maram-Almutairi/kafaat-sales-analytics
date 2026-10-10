@@ -1,0 +1,7 @@
+Level,Model,MAE,RMSE,R2,MAPE_%
+City-month,Linear Regression,22528.143,29004.066,-0.14,42.205
+City-month,Naive (3-month avg),25357.336,30559.471,-0.266,45.263
+City-month,Random Forest,24259.041,28977.815,-0.138,45.695
+Company-month,Linear Regression,51947.092,60312.066,0.071,13.816
+Company-month,Naive (3-month avg),59802.93,74398.054,-0.414,14.727
+Company-month,Random Forest,49858.196,58211.747,0.134,13.351
