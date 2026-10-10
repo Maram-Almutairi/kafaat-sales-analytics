@@ -309,3 +309,5 @@ table.data tbody tr:hover { background: #FAF6FF; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
   html { scroll-behavior: auto; }
 }
+
+.client-logo { display: block; width: 150px; height: auto; margin-bottom: 18px; padding: 8px 12px; background: var(--white); border: var(--line); border-radius: 14px; }
