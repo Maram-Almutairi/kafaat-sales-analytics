@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kafaat Sales Analytics</title>
+  <meta name="description" content="End-to-end sales analytics project: data cleaning, EDA, insights, ML forecast, BigQuery SQL and an interactive dashboard that also analyzes your own CSV or Excel file in the browser.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="site/logo.png">
+  <meta name="theme-color" content="#D9C2F7">
+  <link rel="stylesheet" href="site/style.css?v=2">
+  <script src="site/vendor/xlsx.full.min.js" defer></script>
+  <script src="site/app.js?v=3" defer></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container nav">
+      <a href="#top" class="logo"><img src="site/logo.png" alt="">Maram</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="#dashboard">Dashboard</a>
+        <a href="#insights">Insights</a>
+        <a href="#method">Method</a>
+      </nav>
+      <a class="icon-btn" href="https://github.com/Maram-Almutairi/kafaat-sales-analytics" target="_blank" rel="noopener" aria-label="Source code on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- ===== Hero ===== -->
+    <section class="hero">
+      <div class="container">
+        <span class="pill">✱ Data analytics project</span>
+        <h1>Kafaat <b>sales analytics</b></h1>
+        <p class="lead">Two years of sales across six Saudi cities, cleaned, explored and turned into decisions. The interactive dashboard below can also analyze <b>your own</b> sales file.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#dashboard">Open the dashboard</a>
+          <a class="btn" href="https://github.com/Maram-Almutairi/kafaat-sales-analytics" target="_blank" rel="noopener">View the code</a>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="v num">10.04M</span><span class="l">Total sales (SAR)</span></div>
+          <div class="stat"><span class="v num">3.77M</span><span class="l">Total profit (SAR)</span></div>
+          <div class="stat"><span class="v num">37.5%</span><span class="l">Profit margin</span></div>
+          <div class="stat"><span class="v num">1,992</span><span class="l">Deals · Jun 2004 – Jun 2006</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Dashboard ===== -->
+    <section id="dashboard" class="section">
+      <div class="container">
+        <div class="section-head">
+          <span class="pill pill-mint">✱ Interactive dashboard</span>
+          <h2>Explore the data</h2>
+          <p>Filter by date, city, rep, store or product, or upload your own CSV / Excel file. Hover any chart for details.</p>
+        </div>
+
+        <div class="toolbar">
+          <div class="seg" role="group" aria-label="Data source">
+            <button type="button" id="src-sample" aria-pressed="true">Kafaat data</button>
+            <button type="button" id="src-upload" aria-pressed="false">Upload my file</button>
+          </div>
+          <span class="spacer"></span>
+          <span class="privacy">🔒 Files are analyzed in your browser and never uploaded to any server.</span>
+        </div>
+
+        <div id="upload-area" hidden>
+          <label class="upload" id="dropzone">
+            <input type="file" id="file-input" accept=".csv,.txt,.xlsx,.xls">
+            <strong>Drop a CSV or Excel file here, or click to choose</strong>
+            <span>One row per sale, with a date, a sale amount and a cost column, plus up to 4 grouping columns (city, rep, branch, product…)</span>
+          </label>
+          <div class="panel" id="mapping" hidden>
+            <h3>Column mapping</h3>
+            <p class="hint" id="mapping-hint">Columns were detected automatically. Adjust if needed.</p>
+            <div class="map-grid" id="map-grid"></div>
+          </div>
+        </div>
+
+        <div id="message"></div>
+
+        <div id="dash" hidden>
+          <div class="filters" id="filters"></div>
+
+          <details class="report" id="report">
+            <summary id="report-title">Cleaning report</summary>
+            <div class="body" id="report-body"></div>
+          </details>
+
+          <div class="kpis" id="kpis"></div>
+
+          <div class="grid-2">
+            <div class="chart"><h3 id="t-bar1">Sales by city</h3><p class="sub" id="s-bar1">Total sales, with profit and margin</p><div class="bars" id="c-bar1"></div></div>
+            <div class="chart"><h3 id="t-donut">Sales share by product</h3><p class="sub">Share of total sales</p><div class="donut-wrap" id="c-donut"></div></div>
+          </div>
+
+          <div class="chart full">
+            <h3>Monthly sales trend</h3>
+            <p class="sub">Hollow points are partial months (data starts or ends mid-month)</p>
+            <div id="c-line"></div>
+            <div class="chart-legend"><span><i></i>Monthly sales</span><span><i class="dash"></i>3-month average</span><span><i class="ring"></i>Partial month</span></div>
+          </div>
+
+          <div class="grid-2">
+            <div class="chart"><h3 id="t-heat">Sales by city × product</h3><p class="sub">Thousands · darker = higher</p><div class="table-wrap" id="c-heat"></div></div>
+            <div class="chart"><h3 id="t-bar2">Profit by rep</h3><p class="sub">Total profit, with margin</p><div class="bars" id="c-bar2"></div></div>
+          </div>
+
+          <div class="chart full">
+            <h3>Profit by deal margin</h3>
+            <p class="sub">Where the profit comes from. Each bar is a 1-point margin band</p>
+            <div id="c-hist"></div>
+            <div class="chart-legend"><span><i class="sq soft"></i>Below 15% margin</span><span><i class="sq"></i>15% or more</span></div>
+          </div>
+
+          <div class="chart full">
+            <div class="table-actions">
+              <div><h3>Tables</h3><p class="sub" style="margin:0">Summary by group or the top 10 deals by profit</p></div>
+              <button type="button" class="btn" id="download">Download cleaned data (CSV)</button>
+            </div>
+            <div class="tabs" id="tabs"></div>
+            <div class="table-wrap" id="c-table"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Insights ===== -->
+    <section id="insights" class="section bg-lav">
+      <div class="container">
+        <div class="section-head">
+          <span class="pill pill-pink">✱ Key insights</span>
+          <h2>What the Kafaat data says</h2>
+          <p>Five findings, each with the evidence, why it matters and what to do.</p>
+        </div>
+        <div class="insights">
+          <article class="card insight c-lav">
+            <span class="n num">21.4%</span>
+            <h3>One deal in five earns almost nothing</h3>
+            <dl>
+              <dt>Evidence</dt><dd>Margins sit on 10 fixed pricing tiers (6.5% to 63%). 427 deals are below 15%: 20.9% of sales but only 5.1% of profit.</dd>
+              <dt>Impact</dt><dd>The biggest profit lever in the data: the same sales effort earns 5–10× less.</dd>
+              <dt>Action</dt><dd>Require manager approval below a 25% margin. Lifting these deals to 25% adds <b>+332K SAR (+8.8%)</b> profit with no extra sales.</dd>
+            </dl>
+          </article>
+          <article class="card insight c-pink">
+            <span class="n num">36.8%</span>
+            <h3>Carrefour: biggest store, lowest margin</h3>
+            <dl>
+              <dt>Evidence</dt><dd>26.1% of sales, but the lowest margin, and 24.8% of its deals are below 15% (Panda: 19.2%, 38.4% margin). Panda earns the same profit on 114K less sales.</dd>
+              <dt>Impact</dt><dd>Volume is hiding discount leakage at the largest account.</dd>
+              <dt>Action</dt><dd>Review Carrefour pricing terms using Panda as the benchmark: ≈ <b>+42K SAR</b>.</dd>
+            </dl>
+          </article>
+          <article class="card insight c-blue">
+            <span class="n num">39.6%</span>
+            <h3>Riyadh leads on profit, not Dammam</h3>
+            <dl>
+              <dt>Evidence</dt><dd>Dammam sells most (1.86M) but Riyadh earns most (709K at 39.6%). Riyadh × Office is the top cell (554K). Hail sells least; Abha has the lowest margin (Toys 32.6%).</dd>
+              <dt>Impact</dt><dd>Ranking cities by sales alone rewards discounting.</dd>
+              <dt>Action</dt><dd>Rank cities by profit; replicate Riyadh's Office playbook in Hail and review Toys pricing in Abha.</dd>
+            </dl>
+          </article>
+          <article class="card insight c-peach">
+            <span class="n num">24.4%</span>
+            <h3>Pricing discipline differs by rep</h3>
+            <dl>
+              <dt>Evidence</dt><dd>Yahia leads sales (2.17M) and profit (831K). 24.4% of Maliha's deals are below 15% vs 18.0% for Ghalia (best margin, 38.6%). Abdul is lowest on sales and margin.</dd>
+              <dt>Impact</dt><dd>Maliha at Ghalia's margin ≈ <b>+43K SAR</b>.</dd>
+              <dt>Action</dt><dd>Pay commission on profit, not revenue; coach on negotiation; track "% deals below 15%" monthly per rep.</dd>
+            </dl>
+          </article>
+          <article class="card insight c-mint">
+            <span class="n num">−0.65%</span>
+            <h3>Flat sales, noisy months</h3>
+            <dl>
+              <dt>Evidence</dt><dd>Year 2 vs Year 1: 5.00M vs 5.03M. Full months swing 324K–502K. December is strong both years; November and February are weak. Best model (Random Forest): ≈13% error, R² 0.13.</dd>
+              <dt>Impact</dt><dd>No growth, and a single-number monthly plan is risky.</dd>
+              <dt>Action</dt><dd>Plan in a range (≈365K–465K / month; June 2006 forecast ≈ <b>414K</b>), push campaigns before December, support November and February.</dd>
+            </dl>
+          </article>
+          <article class="card insight">
+            <span class="n num">+16%</span>
+            <h3>Thursday is the busiest day</h3>
+            <dl>
+              <dt>Evidence</dt><dd>Thursday sales 1.63M vs ≈1.40M on other days. Saturday has the best margin (40.8%).</dd>
+              <dt>Impact</dt><dd>Demand is concentrated before the weekend.</dd>
+              <dt>Action</dt><dd>Schedule rep visits and promotions for Wednesday–Thursday.</dd>
+            </dl>
+          </article>
+        </div>
+
+        <div class="recs">
+          <div class="card"><span class="pill">01</span><h3>Discount guardrail</h3><p>No deal below a 25% margin without approval. Up to +332K SAR profit over two years, starting with Carrefour, Maliha and Abdul.</p></div>
+          <div class="card"><span class="pill pill-mint">02</span><h3>Measure profit, not sales</h3><p>Rep commission and city/store targets based on profit and margin, tracked monthly on this dashboard.</p></div>
+          <div class="card"><span class="pill pill-pink">03</span><h3>Targeted growth plan</h3><p>Sales are flat: copy Riyadh's Office success to Hail and Abha, use the December peak, and lift November and February.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Method ===== -->
+    <section id="method" class="section">
+      <div class="container">
+        <div class="section-head">
+          <span class="pill">✱ Method</span>
+          <h2>From raw CSV to decisions</h2>
+        </div>
+        <div class="steps">
+          <div class="card step c-lav"><span class="k">01 · Cleaning</span><h3>1,998 → 1,992 rows</h3><p>Excel serial dates converted; spaces and commas stripped; 2 blank costs, 1 cost of 50,000,000 and 3 dates years away from the rest removed; name typos fixed. <code>01_clean.py</code></p></div>
+          <div class="card step c-mint"><span class="k">02 · EDA</span><h3>Sales, profit, margin</h3><p>By city, rep, store, product, month and weekday; city × product matrix; discovery of the 10 fixed margin tiers. <code>02_eda.py</code></p></div>
+          <div class="card step c-pink"><span class="k">03 · Visualization</span><h3>7 charts</h3><p>Matplotlib / Seaborn charts plus this interactive dashboard. <code>03_visualization.py</code></p></div>
+          <div class="card step c-blue"><span class="k">04 · Forecast</span><h3>Linear Regression vs Random Forest</h3><p>City-month model with lags and seasonality, time-based split, naive baseline. RF: MAE ≈ 50K, MAPE 13.4%. <code>04_ml_model.py</code></p></div>
+          <div class="card step c-peach"><span class="k">05 · Cloud</span><h3>BigQuery + Looker Studio</h3><p>SAFE_CAST cleaning, DATE_ADD date conversion, window functions and a BigQuery ML ARIMA_PLUS forecast. <code>sql/</code></p></div>
+          <div class="card step"><span class="k">06 · Dashboard</span><h3>Your data, your browser</h3><p>This page re-applies the same cleaning rules to any uploaded file, entirely client-side. <code>site/app.js</code></p></div>
+        </div>
+        <div class="chips">
+          <span>Python</span><span>Pandas</span><span>Matplotlib</span><span>Seaborn</span><span>scikit-learn</span><span>BigQuery SQL</span><span>BigQuery ML</span><span>Looker Studio</span><span>Streamlit</span><span>JavaScript</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© Maram Almutairi · Kafaat sales analytics</span>
+      <a href="https://github.com/Maram-Almutairi/kafaat-sales-analytics" target="_blank" rel="noopener">Source on GitHub</a>
+    </div>
+  </footer>
+
+  <div class="tip" id="tip" hidden></div>
+</body>
+</html>

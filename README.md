@@ -13,14 +13,17 @@
 
 الرؤى والتوصيات الكاملة في **[output/insights.md](output/insights.md)**.
 
-### 🌐 اللوحة التفاعلية (أونلاين)
+### 🌐 الموقع (GitHub Pages)
 
-**🔗 [kafaat-sales.streamlit.app](https://kafaat-sales.streamlit.app)**
+**🔗 [maram-almutairi.github.io/kafaat-sales-analytics](https://maram-almutairi.github.io/kafaat-sales-analytics/)**
 
-- تعرض بيانات كفاءات افتراضياً.
-- **تحلل أي ملف مبيعات آخر:** من القائمة الجانبية اختر *Upload my own file* وارفع ملف CSV أو Excel، ثم حدد أي عمود يمثل التاريخ والمبيعات والتكلفة، وأي أعمدة تجميع (مدينة، مندوب، فرع، منتج…). الأعمدة تُكتشف تلقائياً حتى لو كانت عناوينها بالعربي.
-- الملف المرفوع يُنظّف بنفس قواعد `01_clean.py` ويظهر تقرير بالصفوف المحذوفة وسبب حذفها، ويمكن تحميل البيانات النظيفة.
-- الملف المرفوع لا يُحفظ على السيرفر ويختفي بإغلاق الصفحة.
+صفحة المشروع باللغة الإنجليزية وبنفس تصميم البورتفوليو، وفيها:
+- لوحة تفاعلية لبيانات كفاءات: فلاتر، مؤشرات KPI، رسوم بيانية، جداول، وتحميل البيانات النظيفة.
+- **تحليل أي ملف مبيعات آخر (CSV أو Excel):** اختر *Upload my own file*، ثم حدد أعمدة التاريخ والمبيعات والتكلفة وأعمدة التجميع. الأعمدة تُكتشف تلقائياً حتى لو كانت عناوينها بالعربي. الملف يُنظّف بنفس قواعد `01_clean.py` ويظهر تقرير بالصفوف المحذوفة.
+- **الخصوصية:** الملف يُحلَّل داخل متصفح الزائر فقط ولا يُرفع لأي سيرفر.
+- الرؤى الخمس والتوصيات والمنهجية.
+
+الصفحة ملف ثابت (`index.html` + `site/`)، بدون مكتبات خارجية: الرسوم مكتوبة بـ JavaScript، ومكتبة قراءة Excel (SheetJS 0.20.3) محفوظة داخل الـ repo.
 
 ---
 
@@ -65,7 +68,7 @@ kafaat/
 │   ├── 02_eda_queries.sql         استعلامات التحليل
 │   └── 03_advanced_queries.sql    Window Functions + BigQuery ML
 ├── dashboard/
-│   └── app.py                     Streamlit Dashboard (بيانات كفاءات أو أي ملف مرفوع)
+│   └── app.py                     Streamlit Dashboard (نسخة Python محلية)
 ├── output/
 │   ├── city_summary.csv  rep_summary.csv  store_summary.csv  product_summary.csv
 │   ├── monthly_trend.csv  margin_tiers.csv  city_product_matrix.csv
@@ -73,6 +76,8 @@ kafaat/
 │   ├── cleaning_report.md  eda_log.txt
 │   ├── insights.md                الرؤى والتوصيات
 │   └── figures/                   01..07 *.png
+├── index.html                     صفحة GitHub Pages
+├── site/                          style.css + app.js + vendor/xlsx.full.min.js + logo.png
 ├── README.md
 └── requirements.txt
 ```
@@ -184,16 +189,13 @@ streamlit run dashboard/app.py    # http://localhost:8501
 
 ---
 
-## 7. مشاركة لوحة Streamlit
+## 7. نشر ومشاركة اللوحة
 
-| الطريقة | لمن | الخطوات |
-|---|---|---|
-| الشبكة المحلية | زملاء على نفس الـ Wi-Fi | `streamlit run dashboard/app.py` ثم شارك رابط **Network URL** الذي يظهر (مثل `http://192.168.x.x:8501`). يعمل فقط ما دام جهازك شغّالاً. |
-| **Streamlit Community Cloud** (مجاني، المستخدَم حالياً) | أي شخص عبر رابط | [share.streamlit.io](https://share.streamlit.io) ← **Create app** ← Repository = `Maram-Almutairi/kafaat-sales-analytics`، Branch = `main`، Main file = `dashboard/app.py`، App URL = `kafaat-sales` ← **Deploy**. أي `git push` جديد يحدّث الموقع تلقائياً. |
-| Google Cloud Run | الشركة / إنتاج | بناء Docker image وتشغيله على Cloud Run بجانب BigQuery. |
-| Looker Studio | الإدارة | القسم 6 أعلاه: بدون كود، ويُشارك برابط مثل Google Docs. |
-
----
+| الطريقة | الوصف |
+|---|---|
+| **GitHub Pages** (المستخدَم حالياً) | Settings ← Pages ← Source = *Deploy from a branch*، Branch = `main` / `(root)`. أي `git push` جديد يحدّث الموقع خلال دقيقة. |
+| Streamlit (محلياً) | `streamlit run dashboard/app.py`: نسخة Python من اللوحة بنفس قواعد التنظيف. |
+| Looker Studio | القسم 6 أعلاه: بدون كود، ويُشارك برابط. |
 
 ## 8. المكتبات
 

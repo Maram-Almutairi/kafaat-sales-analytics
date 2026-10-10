@@ -4,3 +4,5 @@ __pycache__/
 .claude
 .implam
 .streamlit/secrets.toml
+_debug*
+_test*
